@@ -1,2 +1,2 @@
 # nearn_ft
-A scalale web server in rust for fungible token transfer
+A scalable web server in rust for fungible token transfer on Near protocol.
