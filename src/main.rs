@@ -1,5 +1,5 @@
 use actix_web::{App,HttpServer};
-use nearn_actix::ft_transfer;
+use nearn_ft::ft_transfer;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()>{
