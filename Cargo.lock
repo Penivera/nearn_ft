@@ -2302,6 +2302,7 @@ dependencies = [
  "near-sdk",
  "redis",
  "serde",
+ "serde_json",
  "utoipa",
  "utoipa-actix-web",
  "utoipa-swagger-ui",

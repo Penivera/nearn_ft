@@ -1,10 +1,10 @@
 pub mod types;
 use actix_web::{App, HttpServer, middleware::Logger, web};
+use dotenv::dotenv;
 use log::info;
 use nearn_ft::{ApiDoc, ft_transfer, types::Settings};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use dotenv::dotenv;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

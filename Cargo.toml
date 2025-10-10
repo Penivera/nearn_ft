@@ -16,3 +16,4 @@ utoipa = "5.4.0"
 utoipa-actix-web = "0.1.2"
 utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
 redis = { version = "0.32.7", features = ["tokio-comp"] }
+serde_json = "1.0.145"

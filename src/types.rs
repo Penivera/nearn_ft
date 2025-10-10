@@ -1,10 +1,9 @@
 extern crate serde;
+use dotenv::dotenv;
 use near_api::Signer;
 use near_sdk::AccountId;
 use serde::{Deserialize, Serialize};
 use std::{env, str::FromStr, sync::Arc};
-use dotenv::dotenv;
-
 
 #[derive(Deserialize, Serialize, utoipa::ToSchema)]
 pub struct TokenTransferRequest {
@@ -35,13 +34,16 @@ impl Settings {
         let ft_contract_id = env::var("FT_CONTRACT_ID")?;
         let account_id = env::var("NEAR_ACCOUNT_ID")?;
         let private_key = env::var("NEAR_PRIVATE_KEY")?;
-        let ft_decimals = env::var("FT_DECIMALS")?.parse::<u8>().unwrap_or(6);
+        let ft_decimals = match env::var("FT_DECIMALS") {
+            Ok(val) => val.parse::<u8>().unwrap_or(6),
+            Err(_) => 6, // Or a different default value
+        };
 
         Ok(Self {
             ft_contract_id,
             account_id,
             private_key,
-            ft_decimals
+            ft_decimals,
         })
     }
 
@@ -57,7 +59,6 @@ impl Settings {
 
         let signer: Arc<Signer> =
             Signer::new(signer_from_seed).map_err(|e| format!("Failed to create signer: {}", e))?;
-            
 
         Ok(AccountConfig {
             account_id,
