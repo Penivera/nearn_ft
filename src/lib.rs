@@ -2,13 +2,11 @@ extern crate serde;
 pub mod types;
 use actix_web::{
     Responder, post,
-    web::{self, Data, Json},
+    web::{Data, Json},
 };
 
 use log::{error, info};
 use near_api::*;
-use near_sdk::AccountId;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use types::{AccountConfig, TokenTransferRequest};
 use utoipa::OpenApi;
@@ -34,7 +32,7 @@ pub async fn ft_transfer(
 
     // Parse amount to FT balance (yoctoNEAR)
     let amount_raw = payload.amount.parse::<u128>().unwrap();
-    let amount: FTBalance = FTBalance::with_decimals(24).with_amount(amount_raw);
+    let amount: FTBalance = FTBalance::with_decimals(config.ft_decimals).with_amount(amount_raw);
 
     // Create transfer transaction
     let txn = Tokens::account(config.account_id.clone())
