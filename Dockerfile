@@ -2,7 +2,7 @@
 # Stage 1: Alpine MUSL Builder
 # =================================================================
 # IMPORTANT: Use the '-alpine' tag to get an Alpine-based image
-FROM rust:latest-alpine as builder
+FROM rust:alpine as builder
 
 # This command will now succeed because the base image has 'apk'
 RUN apk add --no-cache build-base eudev-dev clang
