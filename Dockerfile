@@ -1,11 +1,10 @@
 # =================================================================
 # Stage 1: Alpine MUSL Builder
 # =================================================================
-# IMPORTANT: Use the '-alpine' tag to get an Alpine-based image
 FROM rust:alpine as builder
 
-# This command will now succeed because the base image has 'apk'
-RUN apk add --no-cache build-base eudev-dev clang
+# Add linux-headers (for hidapi) and perl (for openssl)
+RUN apk add --no-cache build-base eudev-dev clang linux-headers perl
 
 WORKDIR /app
 
