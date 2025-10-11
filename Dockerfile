@@ -1,38 +1,35 @@
 # =================================================================
-# Stage 1: Builder
+# Stage 1: MUSL Builder
 # =================================================================
 FROM rust:latest as builder
 
-# Command to generate self-signed cert and key for local testing:
-# openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'
-
-# Install system dependencies
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends ca-certificates libudev-dev pkg-config clang && rm -rf /var/lib/apt/lists/*
+# Install MUSL tools and add the rustup target
+RUN apt-get update && apt-get install -y musl-tools clang && \
+    rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /app
 
-# Copy your manifests
 COPY ./Cargo.toml ./Cargo.lock* ./
 
 # Build a dummy project to cache dependencies
 RUN mkdir src && \
     echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs && \
-    cargo build --release && \
-    rm -f target/release/deps/nearn_ft*
+    cargo build --target x86_64-unknown-linux-musl --release && \
+    rm -f target/x86_64-unknown-linux-musl/release/deps/nearn_ft*
 
-# Copy the actual source code
 COPY ./src ./src
 
-# Build the actual application
-RUN cargo build --release
+# Build the actual application for the MUSL target
+RUN cargo build --target x86_64-unknown-linux-musl --release
 
 # =================================================================
-# Stage 2: Final Image
+# Stage 2: Final Static Image
 # =================================================================
-FROM debian:bookworm-slim
+# Use the 'scratch' image, which is completely empty, for a minimal final image
+FROM scratch
 
-# Copy the compiled binary from the builder stage
-COPY --from=builder /app/target/release/nearn_ft /usr/local/bin/nearn_ft
+# Copy the static binary from the builder stage
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/nearn_ft /nearn_ft
 
 # Set the command to run your application
-CMD ["nearn_ft"]
+CMD ["/nearn_ft"]
