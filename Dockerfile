@@ -1,10 +1,10 @@
 # =================================================================
 # Stage 1: Alpine MUSL Builder
-# - Uses Alpine Linux, which is musl-based, to simplify the build.
 # =================================================================
-FROM rust:latest as builder
+# IMPORTANT: Use the '-alpine' tag to get an Alpine-based image
+FROM rust:latest-alpine as builder
 
-# Install build tools and the musl-compatible version of libudev (eudev-dev)
+# This command will now succeed because the base image has 'apk'
 RUN apk add --no-cache build-base eudev-dev clang
 
 WORKDIR /app
@@ -19,18 +19,14 @@ RUN mkdir src && \
 
 COPY ./src ./src
 
-# Build the actual application. No --target flag is needed because Alpine's default is musl.
+# Build the actual application
 RUN cargo build --release
 
 # =================================================================
 # Stage 2: Final Static Image
 # =================================================================
-# Use the 'scratch' image, which is completely empty
 FROM scratch
 
-# Copy the static binary from the builder stage
-# The path is simpler because we are not cross-compiling anymore
 COPY --from=builder /app/target/release/nearn_ft /nearn_ft
 
-# Set the command to run your application
 CMD ["/nearn_ft"]
