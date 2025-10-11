@@ -1,0 +1,43 @@
+# Configuration for the NEAR High-Throughput FT Transfer Service
+
+# NEAR RPC endpoint URL. Use the appropriate URL for your target network (e.g., testnet, mainnet).
+# For local sandbox testing, this might be something like "http://127.0.0.1:8019".
+rpc_url = "https://rpc.testnet.near.org"
+
+# The account ID of the fungible token contract.
+ft_contract_id = "banana.ft-fin.testnet"
+
+# The master account ID that will be sending the funds and managing the keys.
+# This account must have enough funds to cover the transfers and the gas fees for adding keys.
+account_id = "penivera.testnet"
+
+# The master private key is loaded from a .env file (variable: MASTER_KEY) for security.
+
+# Number of decimals for the fungible token.
+ft_decimals = 6
+
+# --- Throughput and Batching Configuration ---
+
+# The number of transfers to bundle into a single NEAR transaction.
+# Default is 10. With a concurrency of 10, this aims for 100 TPS (10 * 10).
+batch_size = 10
+
+# The maximum time in seconds to wait before sending a partially filled batch.
+# This ensures that transfers are not delayed indefinitely during periods of low traffic.
+batch_timeout_secs = 3
+
+# The number of batched transactions to send to the network concurrently.
+# This value determines the level of parallelism.
+concurrency = 10
+
+# The number of keys to generate and add to the account for sending transactions.
+# This should be slightly higher than `concurrency` to avoid nonce contention and handle bottlenecks.
+# The default is 15 (concurrency + 5).
+num_pool_keys = 15
+
+# The allowance in NEAR tokens to assign to each newly generated key.
+# This amount is used to pay for gas fees for the `ft_transfer` calls.
+# 0.25 NEAR is a reasonable default that can cover thousands of transfers.
+key_allowance_near = 0.25
+
+network = "testnet"
