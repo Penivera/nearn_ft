@@ -16,7 +16,7 @@ near-sdk = "5.17.2"
 serde = "1.0.228"
 utoipa = "5.4.0"
 utoipa-actix-web = "0.1.2"
-utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web","reqwest"] }
 redis = { version = "0.32.7", features = ["tokio-comp"] }
 serde_json = "1.0.145"
 toml = "0.9.8"

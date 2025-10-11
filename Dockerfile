@@ -10,6 +10,8 @@ WORKDIR /app
 
 COPY ./Cargo.toml ./Cargo.lock* ./
 
+COPY ./Settings.toml .
+
 # Build a dummy project to cache dependencies
 RUN mkdir src && \
     echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs && \
@@ -28,4 +30,4 @@ FROM scratch
 
 COPY --from=builder /app/target/release/nearn_ft /nearn_ft
 
-CMD ["/nearn_ft"]
+CMD ["./nearn_ft"]
