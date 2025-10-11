@@ -4,7 +4,7 @@
 FROM rust:alpine as builder
 
 # Add linux-headers (for hidapi) and perl (for openssl)
-RUN apk add --no-cache build-base eudev-dev clang linux-headers perl
+RUN apk add --no-cache build-base eudev-dev clang linux-headers perl curl
 
 WORKDIR /app
 
