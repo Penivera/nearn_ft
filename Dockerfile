@@ -2,7 +2,7 @@
 # Stage 1: Alpine MUSL Builder
 # - Uses Alpine Linux, which is musl-based, to simplify the build.
 # =================================================================
-FROM rust:1.81-alpine as builder
+FROM rust:1.82-alpine as builder
 
 # Install build tools and the musl-compatible version of libudev (eudev-dev)
 RUN apk add --no-cache build-base eudev-dev clang
