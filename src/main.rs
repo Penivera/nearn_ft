@@ -57,9 +57,9 @@ async fn main() -> std::io::Result<()> {
             let new_secret_key = generate_secret_key().expect("Failed to generate secret key");
             let new_public_key = new_secret_key.public_key();
 
-            let allowance = (settings.key_allowance_near * 1_000_000_000_000_000_000_000_000.0) as u128;
+            /*let allowance = (settings.key_allowance_near * 1_000_000_000_000_000_000_000_000.0) as u128;
 
-            let ft_contract_id = AccountId::from_str(&settings.ft_contract_id).unwrap();
+            let ft_contract_id = AccountId::from_str(&settings.ft_contract_id).unwrap();*/
 
             let result = Account(near_sdk::AccountId::from_str(&settings.account_id).unwrap())
                 .add_key(

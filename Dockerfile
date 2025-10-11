@@ -3,14 +3,12 @@
 # =================================================================
 FROM rust:alpine as builder
 
-# Add linux-headers (for hidapi) and perl (for openssl)
+# Add all necessary build-time dependencies
 RUN apk add --no-cache build-base eudev-dev clang linux-headers perl curl
 
 WORKDIR /app
 
 COPY ./Cargo.toml ./Cargo.lock* ./
-
-COPY ./Settings.toml .
 
 # Build a dummy project to cache dependencies
 RUN mkdir src && \
@@ -26,8 +24,18 @@ RUN cargo build --release
 # =================================================================
 # Stage 2: Final Static Image
 # =================================================================
+# The 'scratch' image is completely empty, providing a minimal attack surface.
 FROM scratch
 
-COPY --from=builder /app/target/release/nearn_ft /nearn_ft
+# Set a working directory for the application.
+WORKDIR /app
 
+# --- FIX ---
+# Copy the required Settings.toml file into the final image.
+COPY ./Settings.toml .
+
+# Copy the compiled static binary from the builder stage.
+COPY --from=builder /app/target/release/nearn_ft .
+
+# Set the command to run your application from the working directory.
 CMD ["./nearn_ft"]
