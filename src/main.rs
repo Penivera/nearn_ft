@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::BufReader;
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use futures::future::join_all;
 use log::{error, info};
@@ -106,6 +108,30 @@ async fn main() -> std::io::Result<()> {
     info!("🚀 Server starting at http://127.0.0.1:8000");
     info!("📚 Swagger UI available at http://127.0.0.1:8000/docs/");
 
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .unwrap();
+
+    let mut certs_file = BufReader::new(File::open("cert.pem").unwrap());
+    let mut key_file = BufReader::new(File::open("key.pem").unwrap());
+
+    // load TLS certs and key
+    // to create a self-signed temporary cert for testing:
+    // `openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'`
+    let tls_certs = rustls_pemfile::certs(&mut certs_file)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
+        .next()
+        .unwrap()
+        .unwrap();
+
+    // set up TLS config options
+    let tls_config = rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
+        .unwrap();
+
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(tx.clone()))
@@ -115,7 +141,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
     })
-    .bind(("127.0.0.1", 8000))?
+    .bind_rustls_0_23(("127.0.0.1", 8000), tls_config)?
     .run()
     .await
 }
