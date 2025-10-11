@@ -1,13 +1,13 @@
 # =================================================================
 # Stage 1: Builder
 # =================================================================
-FROM rust:1.79 as builder
+FROM rust:latest as builder
 
 # Command to generate self-signed cert and key for local testing:
 # openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y libudev-dev pkg-config clang
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends ca-certificates libudev-dev pkg-config clang && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
