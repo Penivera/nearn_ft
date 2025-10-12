@@ -32,7 +32,7 @@ WORKDIR /app
 
 # --- FIX ---
 # Copy the required Settings.toml file into the final image.
-# COPY ./Settings.toml .
+COPY ./Settings.toml .
 # COPY ./cert.pem .
 # COPY ./key.pem .
 
