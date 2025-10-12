@@ -32,9 +32,9 @@ WORKDIR /app
 
 # --- FIX ---
 # Copy the required Settings.toml file into the final image.
-COPY ./Settings.toml .
-COPY ./cert.pem .
-COPY ./key.pem .
+# COPY ./Settings.toml .
+# COPY ./cert.pem .
+# COPY ./key.pem .
 
 # Copy the compiled static binary from the builder stage.
 COPY --from=builder /app/target/release/nearn_ft .
