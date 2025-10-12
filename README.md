@@ -117,7 +117,7 @@ account_id = "your-account.testnet"
 ft_contract_id = "your-ft-contract.testnet"
 ft_decimals = 18``
 
-# --- Performance ---
+# cargo
 batch_size = 20
 batch_timeout_secs = 5
 concurrency = 10
@@ -138,9 +138,8 @@ docker run -p 6379:6379 -d redis:alpine
 
 Build & Run
 
-cargo run --release
-
-Server starts on:
+cargo run --release 
+Server starts on
 👉 http://0.0.0.0:8080
 
 
