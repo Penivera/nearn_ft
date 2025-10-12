@@ -2,7 +2,7 @@
 
 # NEAR RPC endpoint URL. Use the appropriate URL for your target network (e.g., testnet, mainnet).
 # For local sandbox testing, this might be something like "http://127.0.0.1:8019".
-rpc_url = "https://rpc.testnet.near.org"
+rpc_urls = ["https://rpc.testnet.near.org","https://archival-rpc.testnet.near.org"]
 
 # The account ID of the fungible token contract.
 ft_contract_id = "banana.ft-fin.testnet"

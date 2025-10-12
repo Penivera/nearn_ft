@@ -5,7 +5,7 @@ use dotenv::dotenv;
 // This struct maps directly to the Settings.toml file
 #[derive(Deserialize)]
 struct FileSettings {
-    pub rpc_url: String,
+    pub rpc_urls: Vec<String>,
     pub ft_contract_id: String,
     pub account_id: String,
     pub ft_decimals: u8,
@@ -20,7 +20,7 @@ struct FileSettings {
 // This is the final, complete Settings struct for the application
 #[derive(Clone)]
 pub struct Settings {
-    pub rpc_url: String,
+    pub rpc_urls: Vec<String>,
     pub ft_contract_id: String,
     pub account_id: String,
     pub master_key: String, // Loaded from .env
@@ -46,7 +46,7 @@ impl Settings {
 
         // Combine into the final Settings struct
         Ok(Settings {
-            rpc_url: file_settings.rpc_url,
+            rpc_urls: file_settings.rpc_urls,
             ft_contract_id: file_settings.ft_contract_id,
             account_id: file_settings.account_id,
             master_key,

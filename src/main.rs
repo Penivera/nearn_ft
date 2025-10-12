@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use url::Url;
 
 pub mod types;
 
@@ -22,14 +23,27 @@ async fn main() -> std::io::Result<()> {
         .init();
 
     let settings: Settings = Settings::new().expect("Failed to load settings from Settings.toml");
-    let network_config: NetworkConfig = match settings.network.as_str() {
-        "mainnet" => NetworkConfig::mainnet(),
-        "testnet" => NetworkConfig::testnet(),
-        other => {
-            info!("Unknown network `{}`, defaulting to testnet", other);
-            NetworkConfig::testnet()
-        }
+    let network_config = NetworkConfig {
+        network_name: settings.network.clone(),
+        // Iterate over the URLs, parse them, create an RPCEndpoint for each,
+        // and collect them into the vector.
+        rpc_endpoints: settings
+            .rpc_urls
+            .iter()
+            .map(|url_str| {
+                RPCEndpoint::new(
+                    Url::parse(url_str).expect("Failed to parse RPC URL from settings"),
+                )
+            })
+            .collect(),
+        linkdrop_account_id: None,
+        near_social_db_contract_account_id: None,
+        faucet_url: None,
+        meta_transaction_relayer_url: None,
+        fastnear_url: None,
+        staking_pools_factory_account_id: None,
     };
+
 
     let master_signer: signer::secret_key::SecretKeySigner =
         Signer::from_seed_phrase(&settings.master_key, None)
@@ -140,7 +154,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
     })
-    .bind(("0.0.0.0", 8000))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }
