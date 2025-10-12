@@ -33,7 +33,7 @@ use utoipa::OpenApi;
         ScanPagination
     )),
     tags(
-        (name = "NEAR FT Transfer Service", description = "Endpoints for a high-throughput FT transfer service")
+        (name = "NEAR FT Transfer Service", description = "Endpoints for a high-throughput FT transfer service it assumes reciever_id is always a valid account on the NEAR blockchain.")
     )
 )]
 pub struct ApiDoc;
