@@ -271,7 +271,7 @@ Contributing / debugging tips
 
   Attached artifacts
 
-  - Screenshot: `demo.png` (terminal summary / progress bar snapshot)
+  - Screenshot: `/demo.png` (terminal summary / progress bar snapshot)
 
 
   Summary (from run)
