@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use url::Url;
-
+use deadpool_redis::{Config, Runtime};
 pub mod types;
 
 #[actix_web::main]
@@ -22,7 +22,15 @@ async fn main() -> std::io::Result<()> {
         .format_timestamp_millis()
         .init();
 
+
     let settings: Settings = Settings::new().expect("Failed to load settings from Settings.toml");
+
+    // --- Create Redis Connection Pool ---
+    let redis_cfg = Config::from_url(&settings.redis_url);
+    let redis_pool = redis_cfg.create_pool(Some(Runtime::Tokio1))
+        .expect("Failed to create Redis pool");
+    info!("Redis connection pool created.");
+
     let network_config = NetworkConfig {
         network_name: settings.network.clone(),
         // Iterate over the URLs, parse them, create an RPCEndpoint for each,
@@ -120,38 +128,17 @@ async fn main() -> std::io::Result<()> {
     info!("🚀 Server starting at http://127.0.0.1:8000");
     info!("📚 Swagger UI available at http://127.0.0.1:8000/docs/");
 
-    /*rustls::crypto::aws_lc_rs::default_provider()
-        .install_default()
-        .unwrap();
 
-    let mut certs_file = BufReader::new(File::open("cert.pem").unwrap());
-    let mut key_file = BufReader::new(File::open("key.pem").unwrap());
-
-    // load TLS certs and key
-    // to create a self-signed temporary cert for testing:
-    // `openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'`
-    let tls_certs = rustls_pemfile::certs(&mut certs_file)
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
-    let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
-        .next()
-        .unwrap()
-        .unwrap();
-
-    // set up TLS config options
-    let tls_config = rustls::ServerConfig::builder()
-        .with_no_client_auth()
-        .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
-        .unwrap();
-    */
 
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(tx.clone()))
+            .app_data(web::Data::new(settings.clone()))
+            .app_data(web::Data::new(redis_pool.clone()))
             .wrap(Logger::new("%r %T"))
             .service(ft_transfer)
             .service(
-                SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
+                SwaggerUi::new("/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
     })
     .bind(("0.0.0.0", 8080))?

@@ -2,7 +2,10 @@
 
 # NEAR RPC endpoint URL. Use the appropriate URL for your target network (e.g., testnet, mainnet).
 # For local sandbox testing, this might be something like "http://127.0.0.1:8019".
-rpc_urls = ["https://rpc.testnet.near.org","https://archival-rpc.testnet.near.org"]
+rpc_urls = [
+    "https://rpc.testnet.near.org",
+    "https://archival-rpc.testnet.near.org",
+]
 
 # The account ID of the fungible token contract.
 ft_contract_id = "banana.ft-fin.testnet"
@@ -39,5 +42,6 @@ num_pool_keys = 15
 # This amount is used to pay for gas fees for the `ft_transfer` calls.
 # 0.25 NEAR is a reasonable default that can cover thousands of transfers.
 key_allowance_near = 0.25
+
 
 network = "testnet"

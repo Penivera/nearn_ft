@@ -1,6 +1,6 @@
+use dotenv::dotenv;
 use serde::Deserialize;
 use std::{env, fs};
-use dotenv::dotenv;
 
 // This struct maps directly to the Settings.toml file
 #[derive(Deserialize)]
@@ -14,7 +14,7 @@ struct FileSettings {
     pub concurrency: usize,
     pub num_pool_keys: usize,
     pub key_allowance_near: f64,
-    pub network:String
+    pub network: String,
 }
 
 // This is the final, complete Settings struct for the application
@@ -30,7 +30,8 @@ pub struct Settings {
     pub concurrency: usize,
     pub num_pool_keys: usize,
     pub key_allowance_near: f64,
-    pub network:String
+    pub network: String,
+    pub redis_url: String,
 }
 
 impl Settings {
@@ -44,6 +45,8 @@ impl Settings {
         let master_key = env::var("NEAR_MASTER_KEY")
             .map_err(|_| "MASTER_KEY not found in environment or .env file")?;
 
+        let redis_url = env::var("REDIS_URL")
+            .map_err(|_| "REDIS_URL not found in environment or .env file")?;
         // Combine into the final Settings struct
         Ok(Settings {
             rpc_urls: file_settings.rpc_urls,
@@ -56,7 +59,8 @@ impl Settings {
             concurrency: file_settings.concurrency,
             num_pool_keys: file_settings.num_pool_keys,
             key_allowance_near: file_settings.key_allowance_near,
-            network:file_settings.network
+            network: file_settings.network,
+            redis_url,
         })
     }
 }

@@ -1,11 +1,80 @@
-extern crate serde;
-use near_sdk::AccountId;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
 
-#[derive(Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+pub enum TransactionStatus {
+    Queued,
+    Success,
+    Failure,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
 pub struct TokenTransferRequest {
     #[schema(value_type = String)]
-    pub reciever_id: AccountId,
+    pub reciever_id: String,
     pub amount: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+pub struct TransactionRecord {
+    pub id: String,
+    pub sender_id: String,
+    pub status: TransactionStatus,
+    pub request: TokenTransferRequest,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub txn_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+    #[schema(value_type = String)]
+    pub created_at: DateTime<Utc>,
+}
+
+impl TransactionRecord {
+    pub fn new(sender_id: String, request: TokenTransferRequest) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            sender_id,
+            status: TransactionStatus::Queued,
+            request,
+            txn_hash: None,
+            error_message: None,
+            created_at: Utc::now(),
+        }
+    }
+}
+
+// --- PAGINATION AND RESPONSE STRUCTS ---
+
+#[derive(Deserialize, ToSchema, IntoParams)]
+pub struct Pagination {
+    #[param(description = "Offset for pagination")]
+    pub offset: Option<isize>,
+    #[param(description = "Limit for pagination")]
+    pub limit: Option<isize>,
+}
+
+#[derive(Deserialize, ToSchema, IntoParams)]
+pub struct ScanPagination {
+    #[param(description = "Cursor for SCAN pagination (use 0 to start)")]
+    pub cursor: Option<u64>,
+    #[param(description = "Approximate number of items to return")]
+    pub count: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+pub struct TransferResponse {
+    pub success: bool,
+    pub message: String,
+    pub transaction_id: String,
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
+pub struct PaginatedTransactionResponse {
+    pub next_cursor: u64,
+    pub records: Vec<TransactionRecord>,
 }
