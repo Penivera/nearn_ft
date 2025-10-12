@@ -141,7 +141,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
     })
-    .bind_rustls_0_23(("127.0.0.1", 8000), tls_config)?
+    .bind_rustls_0_23(("0.0.0.0", 8000), tls_config)?
     .run()
     .await
 }
