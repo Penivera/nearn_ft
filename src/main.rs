@@ -108,7 +108,7 @@ async fn main() -> std::io::Result<()> {
     info!("🚀 Server starting at http://127.0.0.1:8000");
     info!("📚 Swagger UI available at http://127.0.0.1:8000/docs/");
 
-    rustls::crypto::aws_lc_rs::default_provider()
+    /*rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .unwrap();
 
@@ -131,6 +131,7 @@ async fn main() -> std::io::Result<()> {
         .with_no_client_auth()
         .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
         .unwrap();
+    */
 
     HttpServer::new(move || {
         App::new()
@@ -141,7 +142,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
     })
-    .bind_rustls_0_23(("0.0.0.0", 8000), tls_config)?
+    .bind(("0.0.0.0", 8000))?
     .run()
     .await
 }
