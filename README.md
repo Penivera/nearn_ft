@@ -110,12 +110,12 @@ a. Settings.toml
 
 Create a Settings.toml file in the root directory:
 
-rpc_urls = ["https://rpc.testnet.near.org"]
+``rpc_urls = ["https://rpc.testnet.near.org"]
 network = "testnet"
 redis_url = "redis://127.0.0.1/"
 account_id = "your-account.testnet"
 ft_contract_id = "your-ft-contract.testnet"
-ft_decimals = 18
+ft_decimals = 18``
 
 # --- Performance ---
 batch_size = 20
@@ -149,7 +149,7 @@ Server starts on:
 📡 API Endpoints
 
 Interactive docs:
-http://localhost:8080/docs
+http://localhost:8080/
 
 Method	Endpoint	Description
 
