@@ -51,17 +51,13 @@ impl TransactionRecord {
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct Pagination {
-    #[param(description = "Offset for pagination")]
     pub offset: Option<isize>,
-    #[param(description = "Limit for pagination")]
     pub limit: Option<isize>,
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct ScanPagination {
-    #[param(description = "Cursor for SCAN pagination (use 0 to start)")]
     pub cursor: Option<u64>,
-    #[param(description = "Approximate number of items to return")]
     pub count: Option<u64>,
 }
 
@@ -71,7 +67,6 @@ pub struct TransferResponse {
     pub message: String,
     pub transaction_id: String,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct PaginatedTransactionResponse {

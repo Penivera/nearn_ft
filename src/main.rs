@@ -1,19 +1,20 @@
 use actix_web::{App, HttpServer, middleware::Logger, web};
+use deadpool_redis::{Config, Runtime};
 use futures::future::join_all;
 use log::{error, info};
 use near_api::near_primitives::account::AccessKeyPermission;
 use near_api::near_primitives::views::FinalExecutionStatus;
 use near_api::{signer::generate_secret_key, *};
 use nearn_ft::{
-    ApiDoc, config::Settings, ft_transfer, types::TokenTransferRequest, worker::run_worker,
+    ApiDoc, config::Settings, ft_transfer, get_all_transactions, get_transaction_by_id,
+    get_transactions_by_receiver, types::TokenTransferRequest, worker::run_worker,
 };
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::mpsc;
+use url::Url;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use url::Url;
-use deadpool_redis::{Config, Runtime};
 pub mod types;
 
 #[actix_web::main]
@@ -22,12 +23,12 @@ async fn main() -> std::io::Result<()> {
         .format_timestamp_millis()
         .init();
 
-
     let settings: Settings = Settings::new().expect("Failed to load settings from Settings.toml");
 
     // --- Create Redis Connection Pool ---
     let redis_cfg = Config::from_url(&settings.redis_url);
-    let redis_pool = redis_cfg.create_pool(Some(Runtime::Tokio1))
+    let redis_pool = redis_cfg
+        .create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis pool");
     info!("Redis connection pool created.");
 
@@ -51,7 +52,6 @@ async fn main() -> std::io::Result<()> {
         fastnear_url: None,
         staking_pools_factory_account_id: None,
     };
-
 
     let master_signer: signer::secret_key::SecretKeySigner =
         Signer::from_seed_phrase(&settings.master_key, None)
@@ -82,10 +82,7 @@ async fn main() -> std::io::Result<()> {
             let ft_contract_id = AccountId::from_str(&settings.ft_contract_id).unwrap();*/
 
             let result = Account(near_sdk::AccountId::from_str(&settings.account_id).unwrap())
-                .add_key(
-                    AccessKeyPermission::FullAccess,
-                    new_public_key.clone(),
-                )
+                .add_key(AccessKeyPermission::FullAccess, new_public_key.clone())
                 .with_signer(Arc::clone(&master_signer))
                 .send_to(&network_config)
                 .await;
@@ -114,21 +111,27 @@ async fn main() -> std::io::Result<()> {
 
     info!("Key pool successfully populated.");
 
-    let (tx, rx) = mpsc::channel::<TokenTransferRequest>(1000); // Channel with a buffer of 1000
+    let (tx, rx) = mpsc::channel::<(String, TokenTransferRequest)>(1000);
 
     let worker_settings = settings.clone();
     /*let account_id = AccountId::from_str(&settings.account_id).unwrap();
     let ft_contract_id = AccountId::from_str(&settings.ft_contract_id).unwrap();*/
     let worker_signer = Arc::clone(&master_signer);
+    let worker_redis_pool = redis_pool.clone();
 
     tokio::spawn(async move {
-        run_worker(rx, worker_signer, worker_settings, network_config).await;
+        run_worker(
+            rx,
+            worker_signer,
+            worker_settings,
+            network_config,
+            worker_redis_pool,
+        )
+        .await;
     });
 
-    info!("🚀 Server starting at http://127.0.0.1:8000");
-    info!("📚 Swagger UI available at http://127.0.0.1:8000/docs/");
-
-
+    info!("🚀 Server starting at port 8080");
+    info!("📚 Swagger UI available at /");
 
     HttpServer::new(move || {
         App::new()
@@ -137,9 +140,10 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(redis_pool.clone()))
             .wrap(Logger::new("%r %T"))
             .service(ft_transfer)
-            .service(
-                SwaggerUi::new("/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()),
-            )
+            .service(get_transaction_by_id)
+            .service(get_transactions_by_receiver)
+            .service(get_all_transactions)
+            .service(SwaggerUi::new("/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()))
     })
     .bind(("0.0.0.0", 8080))?
     .run()

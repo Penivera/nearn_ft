@@ -45,8 +45,8 @@ impl Settings {
         let master_key = env::var("NEAR_MASTER_KEY")
             .map_err(|_| "MASTER_KEY not found in environment or .env file")?;
 
-        let redis_url = env::var("REDIS_URL")
-            .map_err(|_| "REDIS_URL not found in environment or .env file")?;
+        let redis_url =
+            env::var("REDIS_URL").map_err(|_| "REDIS_URL not found in environment or .env file")?;
         // Combine into the final Settings struct
         Ok(Settings {
             rpc_urls: file_settings.rpc_urls,

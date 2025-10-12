@@ -2,15 +2,18 @@ pub mod config;
 pub mod types;
 pub mod worker;
 
-use actix_web::{get, post, web::{Data, Json}, HttpResponse, Responder};
+use crate::config::Settings;
 use actix_web::web::{Path, Query};
+use actix_web::{
+    HttpResponse, Responder, get, post,
+    web::{Data, Json},
+};
 use deadpool_redis::Pool;
-use log::error;
+use log::{error, info};
 use redis::AsyncCommands;
 use tokio::sync::mpsc::Sender;
 use types::*;
 use utoipa::OpenApi;
-use crate::config::Settings;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -48,7 +51,7 @@ pub struct ApiDoc;
 #[post("/transfer")]
 pub async fn ft_transfer(
     payload: Json<TokenTransferRequest>,
-    sender: Data<Sender<TokenTransferRequest>>,
+    sender: Data<Sender<(String, TokenTransferRequest)>>,
     settings: Data<Settings>,
     redis_pool: Data<Pool>,
 ) -> impl Responder {
@@ -77,13 +80,15 @@ pub async fn ft_transfer(
 
         // Add to the user's transaction list
         let _: () = conn
-            .lpush(format!("user_txns:{}", record.request.reciever_id), &record.id)
+            .lpush(
+                format!("user_txns:{}", record.request.reciever_id),
+                &record.id,
+            )
             .await
             .unwrap_or_else(|e| error!("Redis LPUSH error: {}", e));
     });
 
-
-    match sender.send(request).await {
+    match sender.send((record_id.clone(), request)).await {
         Ok(_) => HttpResponse::Accepted().json(TransferResponse {
             success: true,
             message: "Transfer request accepted and queued for processing.".to_string(),
@@ -95,24 +100,24 @@ pub async fn ft_transfer(
             transaction_id: record_id,
         }),
     }
-
 }
-
 #[utoipa::path(
     get,
     path = "/transaction/{id}",
-    params(("id" = String, Path, description = "Unique ID of the transaction")),
+    params(
+        ("id" = String, Path, description = "Unique ID of the transaction to fetch")
+    ),
     responses(
-        (status = 200, body = TransactionRecord),
-        (status = 404)
+        (status = 200, description = "Transaction record found", body = TransactionRecord),
+        (status = 404, description = "Transaction not found")
     )
 )]
 #[get("/transaction/{id}")]
-pub async fn get_transaction_by_id(
-    path: Path<String>,
-    redis_pool: Data<Pool>,
-) -> impl Responder {
+pub async fn get_transaction_by_id(path: Path<String>, redis_pool: Data<Pool>) -> impl Responder {
     let tx_id = path.into_inner();
+    let key = format!("txn:{}", tx_id);
+    info!("Attempting to fetch transaction with key: {}", key); // Added logging
+
     let mut conn = match redis_pool.get().await {
         Ok(conn) => conn,
         Err(e) => {
@@ -120,34 +125,46 @@ pub async fn get_transaction_by_id(
             return HttpResponse::InternalServerError().finish();
         }
     };
-    match conn.get::<_, String>(format!("txn:{}", tx_id)).await {
-        Ok(record_json) => match serde_json::from_str::<TransactionRecord>(&record_json) {
-            Ok(record) => HttpResponse::Ok().json(record),
-            Err(_) => HttpResponse::InternalServerError().finish(),
-        },
-        Err(_) => HttpResponse::NotFound().finish(),
+
+    match conn.get::<_, String>(&key).await {
+        Ok(record_json) => {
+            info!("Found record for key: {}", key); // Added logging
+            match serde_json::from_str::<TransactionRecord>(&record_json) {
+                Ok(record) => HttpResponse::Ok().json(record),
+                Err(e) => {
+                    error!("Failed to parse JSON for key {}: {}", key, e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
+        Err(e) => {
+            // This error is expected if the key doesn't exist
+            error!("Record not found for key {}: {}", key, e); // Added logging
+            HttpResponse::NotFound().finish()
+        }
     }
 }
+
+// In src/lib.rs
 
 #[utoipa::path(
     get,
     path = "/transactions/{receiver_id}",
     params(
-        ("receiver_id" = String, Path, description = "The NEAR account ID of the receiver"),
-        ("offset" = Option<u64>, Query, description = "Pagination offset, default 0"),
-        ("limit" = Option<u64>, Query, description = "Pagination limit, default 10")
+        ("receiver_id" = String, Path, description = "The NEAR account ID of the receiver")
     ),
-    responses((status = 200, body = [TransactionRecord]))
+    // Removed the pagination params
+    responses(
+        (status = 200, description = "A list of all transaction records for the receiver", body = [TransactionRecord])
+    )
 )]
 #[get("/transactions/{receiver_id}")]
 pub async fn get_transactions_by_receiver(
     path: Path<String>,
-    query: Query<Pagination>,
     redis_pool: Data<Pool>,
 ) -> impl Responder {
     let receiver_id = path.into_inner();
-    let offset = query.offset.unwrap_or(0);
-    let limit = query.limit.unwrap_or(10);
+
     let mut conn = match redis_pool.get().await {
         Ok(conn) => conn,
         Err(e) => {
@@ -155,37 +172,45 @@ pub async fn get_transactions_by_receiver(
             return HttpResponse::InternalServerError().finish();
         }
     };
+
     let user_txn_key = format!("user_txns:{}", receiver_id);
-    let txn_ids: Vec<String> = match conn.lrange(&user_txn_key, offset, offset + limit - 1).await {
+    // Fetch all IDs from the list by using 0 (start) and -1 (end)
+    let txn_ids: Vec<String> = match conn.lrange(&user_txn_key, 0, -1).await {
         Ok(ids) => ids,
         Err(_) => return HttpResponse::NotFound().finish(),
     };
+
     if txn_ids.is_empty() {
         return HttpResponse::Ok().json(Vec::<TransactionRecord>::new());
     }
+
     let keys: Vec<String> = txn_ids.into_iter().map(|id| format!("txn:{}", id)).collect();
+
     let records_json: Vec<Option<String>> = match conn.mget(keys).await {
         Ok(records) => records,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
+
     let records: Vec<TransactionRecord> = records_json
         .into_iter()
-        .filter_map(|opt_json_str| {
-            opt_json_str.and_then(|json_str| serde_json::from_str(&json_str).ok())
-        })
+        .filter_map(|opt_json_str| opt_json_str.and_then(|json_str| serde_json::from_str(&json_str).ok()))
         .collect();
+
     HttpResponse::Ok().json(records)
 }
+
 
 #[utoipa::path(
     get,
     path = "/transactions",
+    // THE FIX: Define the optional query parameters explicitly.
     params(
-        ("receiver_id" = String, Path, description = "The NEAR account ID of the receiver"),
-        ("offset" = Option<u64>, Query, description = "Pagination offset, default 0"),
-        ("limit" = Option<u64>, Query, description = "Pagination limit, default 10")
+        ("cursor" = Option<u64>, Query, description = "Scan cursor (use 0 to start)"),
+        ("count" = Option<u64>, Query, description = "Maximum number of items to return")
     ),
-    responses((status = 200, body = PaginatedTransactionResponse))
+    responses(
+        (status = 200, body = PaginatedTransactionResponse)
+    )
 )]
 #[get("/transactions")]
 pub async fn get_all_transactions(
@@ -194,6 +219,7 @@ pub async fn get_all_transactions(
 ) -> impl Responder {
     let cursor = query.cursor.unwrap_or(0);
     let count = query.count.unwrap_or(10);
+
     let mut conn = match redis_pool.get().await {
         Ok(conn) => conn,
         Err(e) => {
@@ -201,6 +227,9 @@ pub async fn get_all_transactions(
             return HttpResponse::InternalServerError().finish();
         }
     };
+
+    info!("Scanning for transactions with cursor {}...", cursor); // Added logging
+
     let (next_cursor, keys): (u64, Vec<String>) = match redis::cmd("SCAN")
         .arg(cursor)
         .arg("MATCH")
@@ -216,22 +245,35 @@ pub async fn get_all_transactions(
             return HttpResponse::InternalServerError().finish();
         }
     };
+
+    info!(
+        "SCAN found {} keys. Next cursor: {}",
+        keys.len(),
+        next_cursor
+    ); // Added logging
+
     if keys.is_empty() {
         return HttpResponse::Ok().json(PaginatedTransactionResponse {
             next_cursor,
             records: Vec::new(),
         });
     }
-    let records_json: Vec<Option<String>> = match conn.mget(keys).await {
+
+    let records_json: Vec<Option<String>> = match conn.mget(&keys).await {
         Ok(records) => records,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
+        Err(e) => {
+            error!("Redis MGET error for scanned keys: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     };
+
     let records: Vec<TransactionRecord> = records_json
         .into_iter()
         .filter_map(|opt_json_str| {
             opt_json_str.and_then(|json_str| serde_json::from_str(&json_str).ok())
         })
         .collect();
+
     HttpResponse::Ok().json(PaginatedTransactionResponse {
         next_cursor,
         records,
