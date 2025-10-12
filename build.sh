@@ -7,6 +7,10 @@ set -e
 echo "--- Installing System Dependencies ---"
 # Use sudo to install packages in Railway's build environment
 sudo apt-get update -y && sudo apt-get install -y \
+  build-base \
+  eudev-dev \
+  clang \
+  linux-headers \
   libudev-dev \
   clang \
   libssl-dev \

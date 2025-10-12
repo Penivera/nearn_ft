@@ -1,9 +1,7 @@
-use std::fs::File;
-use std::io::BufReader;
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use futures::future::join_all;
 use log::{error, info};
-use near_api::near_primitives::account::{AccessKeyPermission, FunctionCallPermission};
+use near_api::near_primitives::account::AccessKeyPermission;
 use near_api::near_primitives::views::FinalExecutionStatus;
 use near_api::{signer::generate_secret_key, *};
 use nearn_ft::{
