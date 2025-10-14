@@ -241,19 +241,23 @@ pub async fn get_all_transactions(
 
 
 
+
 #[utoipa::path(
     get,
     path = "/transactions/status/{status}",
     params(
-        ("status" = String, Path, description = "The status to filter by (Queued, Success, Failure)")
+        ("status" = String, Path, description = "The status to filter by (Queued, Success, Failure)"),
+        ("offset" = Option<u64>, Query, description = "Pagination offset, default 0"),
+        ("limit" = Option<u64>, Query, description = "Pagination limit, default 10")
     ),
     responses(
-        (status = 200, description = "A list of transaction records matching the status", body = [TransactionRecord])
+        (status = 200, description = "A paginated list of transaction records matching the status", body = [TransactionRecord])
     )
 )]
 #[get("/transactions/status/{status}")]
 pub async fn get_transactions_by_status(
     path: Path<String>,
+    query: Query<Pagination>,
     redis_pool: Data<Pool>,
 ) -> impl Responder {
     let status_str = path.into_inner();
@@ -275,14 +279,14 @@ pub async fn get_transactions_by_status(
     let mut all_keys = Vec::new();
     let mut cursor = 0;
 
-    // THE FIX: Manually loop through all keys using SCAN
+    // Loop through all keys using SCAN
     loop {
         let (next_cursor, keys): (u64, Vec<String>) = match redis::cmd("SCAN")
             .arg(cursor)
             .arg("MATCH")
             .arg("txn:*")
             .arg("COUNT")
-            .arg(100) // Fetch 100 keys at a time
+            .arg(100) // Fetch keys in batches of 100
             .query_async(&mut conn)
             .await
         {
@@ -292,11 +296,9 @@ pub async fn get_transactions_by_status(
                 return HttpResponse::InternalServerError().finish();
             }
         };
-
         all_keys.extend(keys);
-
         if next_cursor == 0 {
-            break; // The iteration is complete
+            break;
         }
         cursor = next_cursor;
     }
@@ -313,12 +315,19 @@ pub async fn get_transactions_by_status(
         }
     };
 
+    // THE FIX: Get pagination parameters and apply them after filtering
+    let offset = query.offset.unwrap_or(0);
+    let limit = query.limit.unwrap_or(10);
+
     let records: Vec<TransactionRecord> = records_json
         .into_iter()
         .filter_map(|opt_json_str| {
             opt_json_str.and_then(|json_str| serde_json::from_str(&json_str).ok())
         })
         .filter(|record: &TransactionRecord| std::mem::discriminant(&record.status) == std::mem::discriminant(&status_to_filter))
+        // Apply pagination to the final filtered list
+        .skip(offset as usize)
+        .take(limit as usize)
         .collect();
 
     HttpResponse::Ok().json(records)

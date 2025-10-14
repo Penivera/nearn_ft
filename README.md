@@ -155,7 +155,9 @@ Method	Endpoint	Description
 ``POST	/transfer	Submit a new FT transfer
 GET	/transaction/{id}	Fetch a transaction’s details
 GET	/transactions/{receiver_id}	Get all transactions sent to a receiver
-GET	/transactions	Paginated list of all transactions``
+GET	/transactions	Paginated list of all transactions
+GET /transactions/{status} Paginated list of transactions with a specific status``
+
 
 
 
