@@ -7,7 +7,7 @@ use near_api::near_primitives::views::FinalExecutionStatus;
 use near_api::{signer::generate_secret_key, *};
 use nearn_ft::{
     ApiDoc, config::Settings, ft_transfer, get_all_transactions, get_transaction_by_id,
-    get_transactions_by_receiver, types::TokenTransferRequest, worker::run_worker,
+    get_transactions_by_receiver, types::TokenTransferRequest, worker::run_worker,get_transactions_by_status
 };
 use std::str::FromStr;
 use std::sync::Arc;
@@ -143,6 +143,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_transaction_by_id)
             .service(get_transactions_by_receiver)
             .service(get_all_transactions)
+            .service(get_transactions_by_status)
             .service(SwaggerUi::new("/{_:.*}").url("/api-docs/openapi.json", ApiDoc::openapi()))
     })
     .bind(("0.0.0.0", 8080))?
