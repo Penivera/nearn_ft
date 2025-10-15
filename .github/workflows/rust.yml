@@ -1,4 +1,4 @@
-name: Rust
+name: Docker (build & test)
 
 on:
   push:
@@ -16,7 +16,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+
+    - name: Build Docker image
+      run: |
+        # Tag the image with the commit SHA so builds are unique
+        docker build -t nearn_ft:${{ github.sha }} .
+
+    - name: Run cargo build inside container
+      run: docker run --rm nearn_ft:${{ github.sha }} cargo build --verbose
+
+    - name: Run cargo tests inside container
+      run: docker run --rm nearn_ft:${{ github.sha }} cargo test --verbose
